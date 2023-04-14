@@ -41,17 +41,18 @@ class ERPOnlineVip(Controller):
             'success': True
         }
         try:
-            if 'return' not in python_code:
-                raise Exception('Need `return` statement on code')
-
+            assert python_code.strip() != '', "Required python code"
             with request.env.cr.savepoint():
                 result = None
-                code = f"""
-                    def exe():
-                        {python_code.strip()}
-                    result = exe()
-                """
-                exec(code)
+                code_lines = [code_line.strip() for code_line in python_code.split('\n')]
+                for i, code_line in enumerate(code_lines):
+                    if code_line == '':
+                        continue
+
+                    if i != len(code_lines) - 1:
+                        exec(code_line)
+                    else:
+                        result = eval(code_line)
 
                 if not is_jsonable(result):
                     result = repr(result)
@@ -72,5 +73,5 @@ class ERPOnlineVip(Controller):
             end_time = time.time()
             response_data['time_exec'] = end_time - start_time
 
-        response.data = json.dumps(response_data)
+        response.data = json.dumps(response_data, indent=4)
         return response
